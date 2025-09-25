@@ -18,16 +18,13 @@ GPIO.setup(PIN_BUTTON, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 # Stati
 SPEED = 100
-SOGLIA_FRONTALE = 220
-DISTANZA_MURO = 83
-TEMPO_SUPERAMENTO = 0.2
-TEMPO_AGGIRAMENTO = 0.6
+SOGLIA_FRONTALE = 240
+DISTANZA_MURO = 100
+TEMPO_SUPERAMENTO = 0.3
+TEMPO_AGGIRAMENTO = 0.5
 Kp_align = 0.8
 Kd_align = 0.15
 Kp_dist = -0.8
-Leds = 0
-LED_NUMBER = 8
-TEMPO_DIREZIONAMENTO = 0.7
 
 STATE_AVANZA = "AVANZA"
 STATE_ALLINEAMENTO = "ALLINEAMENTO"
@@ -71,9 +68,7 @@ try:
             if not attivo:
                 print("▶️ Avvio")
                 attivo = True
-                gira_sinistra(SPEED)
-                time.sleep(1.2)
-                stato = STATE_AVANZA  
+                stato = STATE_AVANZA
                 errore_precedente = 0
                 ultimo_rilevamento = 0
                 aggira_inizio_tempo = None
@@ -90,13 +85,11 @@ try:
         # Logica robot attiva solo se in esecuzione
         if attivo:
             fototransistor = rilevamento_luce()
-            if 1 in fototransistor and (time.time()-ultimo_rilevamento) > 5:
+            if 1 in fototransistor and (time.time()-ultimo_rilevamento) > 10:
                 print("🔦 RILEVATO OBIETTIVO!")
                 ultimo_rilevamento = time.time()
                 stato = STATE_RILEVAMENTO_LUCE
-                Leds+=1
-                
-                
+
             distanze = leggi_distanze()
             fl = distanze.get("FL")
             fr = distanze.get("FR")
@@ -106,7 +99,6 @@ try:
             print(f"\n📡 Stato: {stato}")
             print(f"    FL = {fl} mm, FR = {fr} mm, R1 = {r1} mm, R2 = {r2} mm")
             print(f"    Fototransistor: {fototransistor[0]} - {fototransistor[1]}")
-            print(f'\n  Led trovati: {Leds}')
 
             if stato == STATE_AVANZA:
                 if (fl < SOGLIA_FRONTALE) or (fr < SOGLIA_FRONTALE):
@@ -117,7 +109,7 @@ try:
                     set_motore_destra(SPEED)
 
             elif stato == STATE_ALLINEAMENTO:
-                if (fl > SOGLIA_FRONTALE + 10) and (fr > SOGLIA_FRONTALE + 10):
+                if (fl > SOGLIA_FRONTALE) and (fr > SOGLIA_FRONTALE):
                     stato = STATE_MURO_ALLINEAMENTO
                 else:
                     gira_sinistra(100)
@@ -126,19 +118,19 @@ try:
                 stato = STATE_MURO_ALLINEAMENTO
 
             elif stato == STATE_MURO_ALLINEAMENTO:
-                if (fl < SOGLIA_FRONTALE + 13) or (fr < SOGLIA_FRONTALE + 13):
+                if (fl < SOGLIA_FRONTALE) or (fr < SOGLIA_FRONTALE):
                     print("🧱 Muro di fronte")
                     stop()
                     time.sleep(0.1)
                     stato = STATE_ALLINEAMENTO
                     continue
 
-                if fl > SOGLIA_FRONTALE and r1 > 300 and abs(r1-r2)>300:
+                if fl > SOGLIA_FRONTALE and r1 > 300:
                     stato = STATE_AGGIRA_ANGOLO_DX
                     continue
 
                 errore_allineamento = r1 - r2
-                errore_distanza = DISTANZA_MURO + 20 - (r1 + r2) / 2
+                errore_distanza = DISTANZA_MURO - (r1 + r2) / 2
                 derivata_allineamento = errore_allineamento - errore_precedente
                 errore_precedente = errore_allineamento
 
@@ -185,12 +177,6 @@ try:
                     continue
                 set_motore_sinistra(SPEED)
                 set_motore_destra(0)
-                if (fl < SOGLIA_FRONTALE) or (fr < SOGLIA_FRONTALE):
-                        print("🧱 Muro di fronte")
-                        stop()
-                        time.sleep(0.1)
-                        stato = STATE_ALLINEAMENTO
-                        continue
                 if time.time() - aggira_inizio_tempo > TEMPO_AGGIRAMENTO:
                     stop()
                     stato = STATE_SEGUI_MURO
@@ -201,13 +187,6 @@ try:
                 stato = STATE_SEGUI_MURO
 
         time.sleep(0.05)
-        
-        
-        if Leds == LED_NUMBER and stato == STATE_SEGUI_MURO:
-            gira_sinistra(SPEED)
-            time.sleep(0.5)
-            stato = STATE_AVANZA
-            Leds = 0
 
 except KeyboardInterrupt:
     print("Uscita manuale")

@@ -21,12 +21,12 @@ SPEED = 100
 SOGLIA_FRONTALE = 220
 DISTANZA_MURO = 83
 TEMPO_SUPERAMENTO = 0.2
-TEMPO_AGGIRAMENTO = 0.6
+TEMPO_AGGIRAMENTO = 0.4
 Kp_align = 0.8
 Kd_align = 0.15
 Kp_dist = -0.8
 Leds = 0
-LED_NUMBER = 8
+LED_NUMBER = 3
 TEMPO_DIREZIONAMENTO = 0.7
 
 STATE_AVANZA = "AVANZA"
@@ -71,9 +71,7 @@ try:
             if not attivo:
                 print("▶️ Avvio")
                 attivo = True
-                gira_sinistra(SPEED)
-                time.sleep(1.2)
-                stato = STATE_AVANZA  
+                stato = STATE_AVANZA
                 errore_precedente = 0
                 ultimo_rilevamento = 0
                 aggira_inizio_tempo = None
@@ -117,7 +115,7 @@ try:
                     set_motore_destra(SPEED)
 
             elif stato == STATE_ALLINEAMENTO:
-                if (fl > SOGLIA_FRONTALE + 10) and (fr > SOGLIA_FRONTALE + 10):
+                if (fl > SOGLIA_FRONTALE) and (fr > SOGLIA_FRONTALE):
                     stato = STATE_MURO_ALLINEAMENTO
                 else:
                     gira_sinistra(100)
@@ -126,7 +124,7 @@ try:
                 stato = STATE_MURO_ALLINEAMENTO
 
             elif stato == STATE_MURO_ALLINEAMENTO:
-                if (fl < SOGLIA_FRONTALE + 13) or (fr < SOGLIA_FRONTALE + 13):
+                if (fl < SOGLIA_FRONTALE) or (fr < SOGLIA_FRONTALE):
                     print("🧱 Muro di fronte")
                     stop()
                     time.sleep(0.1)
@@ -138,7 +136,7 @@ try:
                     continue
 
                 errore_allineamento = r1 - r2
-                errore_distanza = DISTANZA_MURO + 20 - (r1 + r2) / 2
+                errore_distanza = DISTANZA_MURO - (r1 + r2) / 2
                 derivata_allineamento = errore_allineamento - errore_precedente
                 errore_precedente = errore_allineamento
 
@@ -160,6 +158,10 @@ try:
                     time.sleep(0.1)
                     stato = STATE_ALLINEAMENTO
                     continue
+                if fl > 600 and fr > 600 and r1 > 600 and r2 > 600:
+                    gira_sinistra(SPEED)
+                    time.sleep(TEMPO_DIREZIONAMENTO)
+                    stato = STATE_AVANZA
                 stop()
                 aggira_inizio_tempo = time.time()
                 stato = STATE_AGGIRA_ANGOLO_AVANZA
@@ -185,12 +187,6 @@ try:
                     continue
                 set_motore_sinistra(SPEED)
                 set_motore_destra(0)
-                if (fl < SOGLIA_FRONTALE) or (fr < SOGLIA_FRONTALE):
-                        print("🧱 Muro di fronte")
-                        stop()
-                        time.sleep(0.1)
-                        stato = STATE_ALLINEAMENTO
-                        continue
                 if time.time() - aggira_inizio_tempo > TEMPO_AGGIRAMENTO:
                     stop()
                     stato = STATE_SEGUI_MURO
@@ -215,3 +211,4 @@ finally:
     stop()
     chiudi()
     GPIO.cleanup()
+
